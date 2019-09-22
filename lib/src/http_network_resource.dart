@@ -5,24 +5,25 @@ import 'package:async_resource/async_resource.dart';
 
 /// A [NetworkResource] over HTTP.
 class HttpNetworkResource<T> extends NetworkResource<T> {
-  HttpNetworkResource(
-      {@required String url,
-      @required LocalResource<T> cache,
-      Duration maxAge,
-      CacheStrategy strategy,
-      Parser parser,
-      this.client,
-      this.headers,
-      this.binary: false,
-      this.acceptedResponses: const [200]})
+  HttpNetworkResource({@required String url,
+    @required LocalResource<T> cache,
+    Duration maxAge,
+    CacheStrategy strategy,
+    Parser parser,
+    this.client,
+    this.headers,
+    this.isPostApi: false,
+    this.postData: const {},
+    this.binary: false,
+    this.acceptedResponses: const [200]})
       : assert(binary != null),
         assert(acceptedResponses != null),
         super(
-            url: url,
-            cache: cache,
-            maxAge: maxAge,
-            strategy: strategy,
-            parser: parser);
+          url: url,
+          cache: cache,
+          maxAge: maxAge,
+          strategy: strategy,
+          parser: parser);
 
   /// Optional. The [http.Client] to use, recommended if frequently hitting
   /// the same server. If not specified, [http.get()] will be used instead.
@@ -33,6 +34,8 @@ class HttpNetworkResource<T> extends NetworkResource<T> {
 
   /// Whether the underlying data is binary or string-based.
   final bool binary;
+  final bool isPostApi;
+  final Map<String, String> postData;
 
   /// Acceptable HTTP response codes. The response body will only be returned if
   /// the status code matches one of these.
@@ -41,7 +44,10 @@ class HttpNetworkResource<T> extends NetworkResource<T> {
   @override
   Future<dynamic> fetchContents() async {
     final response = await (client == null
-        ? http.get(url, headers: headers)
+        ? isPostApi ? http.post(url, headers: headers, body: postData) : http
+        .get(url, headers: headers)
+        : isPostApi
+        ? client.post(url, headers: headers, body: postData)
         : client.get(url, headers: headers));
     return (response != null && acceptedResponses.contains(response.statusCode))
         ? (binary ? response.bodyBytes : response.body)
